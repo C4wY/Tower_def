@@ -6,23 +6,21 @@ public class CameraManager : MonoBehaviour
 {
     #region Variables
 
-    private Vector2 _mouseDelta;
+    Vector2 mouseDelta = new Vector2();
+    bool mouseIsDown = false;
 
-    private bool _isMoving;
-
-    [SerializeField] private float movementSpeed = 10.0f;
+    public float movementSpeed = 10.0f;
 
     public Vector3 horizontalAxis = new Vector3();
     public Vector3 verticalAxis = new Vector3();
 
-    private Transform rig;
+    Transform rig;
 
     public Transform scrollStart;
     public Transform scrollEnd;
-    [Range(0, 1)]
-    public float scrollPosition = 0;
+    [Range(0, 1)] public float scrollPosition = 0;
 
-    private new Camera camera;
+    new Camera camera;
 
     #endregion
 
@@ -39,19 +37,17 @@ public class CameraManager : MonoBehaviour
     private void Start() 
     {
         rig = transform.Find("Rig");
-        Debug.Log($"rig: {rig}");
         camera = GetComponentInChildren<Camera>();
     }
 
     public void OnLook(InputAction.CallbackContext context)
     {
-        _mouseDelta = context.ReadValue<Vector2>();
+        mouseDelta = context.ReadValue<Vector2>();
     }
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        Debug.Log($"OnMove {context.ReadValue<Vector2>()}");
-        _isMoving = context.started || context.performed;
+        mouseIsDown = context.started || context.performed;
     }
 
     private void Update() 
@@ -65,7 +61,6 @@ public class CameraManager : MonoBehaviour
         {
             horizontalAxis = camera.transform.right;
         }
-
         if (ScrollIsValid())
         {
             transform.position = Vector3.Lerp(scrollStart.position, scrollEnd.position, scrollPosition);
@@ -74,15 +69,15 @@ public class CameraManager : MonoBehaviour
 
     private void LateUpdate()
     {
-        // Debug.Log($"LateUpdate {ScrollIsValid()} {_isMoving}");
-        if (_isMoving && ScrollIsValid())
+        if (mouseIsDown && ScrollIsValid())
         {
-            var userDrag = 
-                camera.transform.right * _mouseDelta.x
-                + camera.transform.up * _mouseDelta.y;
+            float screenSize = (Screen.width + Screen.width) / 2f;
+            Vector3 userDrag = 
+                camera.transform.right * mouseDelta.x / screenSize
+                + camera.transform.up * mouseDelta.y / screenSize;
 
-            float progression = Vector3.Dot(GetScrollDirection(), userDrag);
-            Debug.Log(progression);
+            float progression = -Vector3.Dot(GetScrollDirection(), userDrag);
+            scrollPosition = Mathf.Clamp01(scrollPosition + progression);
        }
     }
 
@@ -102,10 +97,7 @@ public class CameraManager : MonoBehaviour
             Gizmos.DrawRay(transform.position, verticalAxis);
             Gizmos.DrawSphere(transform.position + verticalAxis, 0.1f);
         }
-    }
 
-    private void OnDrawGizmosSelected()
-    {
         if (ScrollIsValid())
         {
             Gizmos.color = Color.yellow;
